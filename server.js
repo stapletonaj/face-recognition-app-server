@@ -2,7 +2,23 @@
 const   express = require('express'),
         bodyParser = require('body-parser'),
         bcrypt = require('bcrypt-nodejs'),
-        cors = require('cors');
+        cors = require('cors'),
+        knex = require('knex');
+
+//connect to the postgresql database
+const db = knex({
+    client: 'pg',
+    connection: {
+        host: '127.0.0.1',
+        user: 'Andy',
+        password: 'bums',
+        database: 'smart-brain'
+    }
+});
+
+db.select('*').from('users').then(data => {
+    console.log(data);
+})
 
 // invoke express
 const app = express()
@@ -10,6 +26,7 @@ const app = express()
 //use body parser or else the things will come back as undefined
 // also need to parse with the json() method if using json.
 app.use(bodyParser.json());
+//cors is something that enables multible sources on one page - if we dont use this we get an error 
 app.use(cors());
 
 const database = {
@@ -51,7 +68,7 @@ app.get('/', (req, res) => {
 app.post('/signin', (req, res) => {
     if (req.body.email === database.users[0].email 
         && req.body.password === database.users[0].password){
-            res.json('success')
+            res.json(database.users[0])
         } else {
             res.status(400).json('error logging in!')
         }
@@ -64,14 +81,20 @@ app.post('/signin', (req, res) => {
 
 app.post('/register', (req, res) => {
     const {email, name, password} = req.body;
-    database.users.push({
-        id: "125",
-        name: name,
-        email: email,
-        entries: 0,
-        joined: new Date()
-    })
-    res.json(database.users[database.users.length-1])
+    db('users')
+        .returning('*')
+        .insert({
+            email: email,
+            name: name,
+            joined: new Date() 
+        })
+        .then(user => {
+            res.json(user[0]) 
+        })
+        .catch(err =>{
+            res.status(400).json('unable to register')
+        })
+    
 })
 
 
@@ -79,11 +102,8 @@ app.post('/register', (req, res) => {
 app.get('/profile/:id', (req, res) => {
     const {id} = req.params;
     let found = false;
-    database.users.forEach(user => {
-        if(user.id === id){
-            found = true;
-            return res.json(user);
-        }
+    db.select('*').from('users').then(user => {
+        console.log(user)
     })
     if (!found){
        res.status(400).json('not found');
@@ -114,7 +134,7 @@ app.put('/image', (req, res) => {
 
 // start server
 app.listen(4000, () => {
-    console.log('server for app is running on port 3000')
+    console.log('server for app is running on port 4000')
 })
 
 
