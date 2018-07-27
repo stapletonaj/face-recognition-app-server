@@ -3,7 +3,11 @@ const   express = require('express'),
         bodyParser = require('body-parser'),
         bcrypt = require('bcrypt-nodejs'),
         cors = require('cors'),
-        knex = require('knex');
+        knex = require('knex'),
+        register = require('./controllers/register'),
+        profile = require('./controllers/profile'),
+        image = require('./controllers/image'),
+        signin = require('./controllers/signin');
 
 //connect to the postgresql database
 const db = knex({
@@ -26,101 +30,28 @@ const app = express()
 //use body parser or else the things will come back as undefined
 // also need to parse with the json() method if using json.
 app.use(bodyParser.json());
-//cors is something that enables multible sources on one page - if we dont use this we get an error 
+//cors is something that enables multiple sources on one page - if we dont use this we get an error 
 app.use(cors());
 
 
 
 // Routes ==================================
-
 app.get('/', (req, res) => {
     res.send(database.users)
 })
 
 // Sign in Route
-app.post('/signin', (req, res) => {
-    db.select('email', 'hash').from('login')
-    .where('email', '=', req.body.email)
-    .then(data => {
-            const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
-            if (isValid){
-                return db.select('*').from('users')
-                .where('email', '=', req.body.email)
-                .then(user => {
-                    res.json(user[0])
-                })
-                .catch(err => res.status(400).json('unable to get user'))
-            } else {
-                res.status(400).json('wrong credentials')
-            }
-            
-    })
-    .catch(err => res.status(400).json('wrong credentials'))
-})
-
-
+app.post('/signin', (req, res) => { signin.handleSignin(req, res, db, bcrypt)})
 
 // Register Route
-
-app.post('/register', (req, res) => {
-    const {email, name, password} = req.body;
-    const hash = bcrypt.hashSync(password);
-        //transactions are used so that if one thing fails they all fail...
-        db.transaction(trx => {
-            trx.insert({
-                hash: hash,
-                email: email
-            })
-            .into('login')
-            .returning('email')
-            .then(loginEmail => {
-                return trx('users')
-                    .returning('*')
-                    .insert({
-                        email: loginEmail[0],
-                        name: name,
-                        joined: new Date()
-                    })
-                    .then(user => {
-                        res.json(user[0])
-                    })
-            })
-            .then(trx.commit)
-            .catch(trx.rollback)
-        })  
-        .catch(err => {
-            res.status(400).json('unable to register')
-        })
-    
-})
-
+//parameter injection in handle, resgister
+app.post('/register', (req, res) => {register.handleRegister(req, res, db, bcrypt)})
 
 //profile route
-app.get('/profile/:id', (req, res) => {
-    const {id} = req.params;
-    db.select('*').from('users').where({
-        id: id,
-    })
-    .then(user => {
-        if(user.length){
-            res.json(user[0])   
-        } else {
-            res.status(400).json('error user not found!')
-        }   
-    })
-})
+app.get('/profile/:id', (req, res) => {profile.handleProfile(req, res, db)})
 
 //image route
-app.put('/image', (req, res) => {
-    const { id } = req.body;
-    db('users').where('id', '=', id)
-        .increment('entries', 1)
-        .returning('entries')
-        .then(entries => {
-            res.json(entries)
-        })
-        .catch(err => res.status(400).json('unable to get entries'))
-})
+app.put('/image', (req, res) => { image.handleImage(req, res, db) }) 
 
 
 
