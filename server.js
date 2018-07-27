@@ -65,7 +65,7 @@ app.post('/signin', (req, res) => {
 app.post('/register', (req, res) => {
     const {email, name, password} = req.body;
     const hash = bcrypt.hashSync(password);
-    
+        //transactions are used so that if one thing fails they all fail...
         db.transaction(trx => {
             trx.insert({
                 hash: hash,
