@@ -4,6 +4,7 @@ const   express = require('express'),
         bcrypt = require('bcrypt-nodejs'),
         cors = require('cors'),
         knex = require('knex'),
+
         register = require('./controllers/register'),
         profile = require('./controllers/profile'),
         image = require('./controllers/image'),
@@ -19,10 +20,6 @@ const db = knex({
         database: 'smart-brain'
     }
 });
-
-// db.select('*').from('users').then(data => {
-//     console.log(data);
-// })
 
 // invoke express
 const app = express()
@@ -51,11 +48,10 @@ app.post('/register', (req, res) => {register.handleRegister(req, res, db, bcryp
 app.get('/profile/:id', (req, res) => {profile.handleProfile(req, res, db)})
 
 //image route
-app.put('/image', (req, res) => { image.handleImage(req, res, db) }) 
-
-
-
-
+app.put('/image', (req, res) => { image.handleImage(req, res, db) })
+app.post("/imageurl", (req, res) => {
+  image.handleApiCall(req, res);
+});  
 
 
 
@@ -64,15 +60,3 @@ app.listen(4000, () => {
     console.log('server for app is running on port 4000')
 })
 
-
-
-
-
-
-
-/*
-/signin ---> POST request = sucess/fail
-/register ---> POST request = return user
-/profile/:id ---> GET = return user
-/image ---> PUT request = return updated user 
-*/
